@@ -2,6 +2,8 @@
 
 module CarrierWave
   module Vips
+    @@gc_interval = 5
+    @@gc_countdown = @@gc_interval
 
     SHARPEN_MASK = begin
       conv_mask = [
@@ -228,6 +230,15 @@ module CarrierWave
         FileUtils.mv(tmp_name, current_path)
         @_vimage = nil
       end
+
+      # Manually trigger a GC to clear VIPS data from memory
+      @@gc_countdown -= 1
+
+      if @@gc_countdown <= 0
+         GC.start
+         @@gc_countdown = @@gc_interval
+      end
+
       ret
     end
 
