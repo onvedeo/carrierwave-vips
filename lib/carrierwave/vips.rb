@@ -14,6 +14,15 @@ module CarrierWave
       ::VIPS::Mask.new conv_mask, 16
     end
 
+    def self.gc_interval
+      @@gc_interval
+    end
+
+    def self.gc_interval=(val)
+      @@gc_interval = val
+      @@gc_countdown = val
+    end
+
     def self.included(base)
       base.send(:extend, ClassMethods)
     end
