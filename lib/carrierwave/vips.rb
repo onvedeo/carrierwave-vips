@@ -4,6 +4,7 @@ module CarrierWave
   module Vips
     @@gc_interval = 5
     @@gc_countdown = @@gc_interval
+    @@gc_mutex = Mutex.new
 
     SHARPEN_MASK = begin
       conv_mask = [
@@ -238,14 +239,17 @@ module CarrierWave
         writer.write(tmp_name)
         FileUtils.mv(tmp_name, current_path)
         @_vimage = nil
+        writer = nil
       end
 
       # Manually trigger a GC to clear VIPS data from memory
-      @@gc_countdown -= 1
+      @@gc_mutex.synchronize do
+        @@gc_countdown -= 1
 
-      if @@gc_countdown <= 0
-         GC.start
-         @@gc_countdown = @@gc_interval
+        if @@gc_countdown <= 0
+           GC.start
+           @@gc_countdown = @@gc_interval
+        end
       end
 
       ret
@@ -262,7 +266,7 @@ module CarrierWave
     end
 
     def resize_image(image, width, height, min_or_max = :min)
-      ratio = get_ratio image, width, height, min_or_max
+      ratio = get_ratio image, width, height, :min
       return image if ratio == 1
       if ratio > 1
         image = image.affinei_resize :nearest, ratio
@@ -274,7 +278,7 @@ module CarrierWave
           ratio = get_ratio image, width, height, min_or_max
         end
         image = image.affinei_resize :bicubic, ratio
-        image = image.conv SHARPEN_MASK
+        #image = image.conv SHARPEN_MASK
       end
       image
     end
