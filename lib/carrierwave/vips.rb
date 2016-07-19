@@ -2,17 +2,17 @@
 
 module CarrierWave
   module Vips
-    @@gc_interval = 5
+    @@gc_interval = 100
     @@gc_countdown = @@gc_interval
     @@gc_mutex = Mutex.new
 
     SHARPEN_MASK = begin
       conv_mask = [
         [ -1, -1, -1 ],
-        [ -1, 24, -1 ],
+        [ -1, 32, -1 ],
         [ -1, -1, -1 ]
       ]
-      ::VIPS::Mask.new conv_mask, 16
+      ::VIPS::Mask.new conv_mask, 24, 0
     end
 
     def self.gc_interval
@@ -242,6 +242,9 @@ module CarrierWave
         writer = nil
       end
 
+      # Clean up vips resources
+      VIPS::thread_shutdown
+
       # Manually trigger a GC to clear VIPS data from memory
       @@gc_mutex.synchronize do
         @@gc_countdown -= 1
@@ -278,7 +281,7 @@ module CarrierWave
           ratio = get_ratio image, width, height, min_or_max
         end
         image = image.affinei_resize :bicubic, ratio
-        #image = image.conv SHARPEN_MASK
+        image = image.conv SHARPEN_MASK
       end
       image
     end
